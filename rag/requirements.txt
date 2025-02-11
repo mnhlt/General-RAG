@@ -1,0 +1,7 @@
+langgraph
+chromadb
+fastapi
+openai
+python-multipart
+pdfminer.six
+uvicorn 

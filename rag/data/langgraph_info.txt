@@ -1,0 +1,8 @@
+LangGraph is a library for building stateful, multi-actor applications with LLMs, used to create agent and multi-agent workflows. It is inspired by Pregel and Apache Beam, with a public interface drawing inspiration from NetworkX.
+
+Key features of LangGraph:
+1. Memory: LangGraph persists arbitrary aspects of your application's state, supporting memory of conversations and other updates within and across user interactions.
+2. Human-in-the-loop: Because state is checkpointed, execution can be interrupted and resumed, allowing for decisions, validation, and corrections at key stages via human input.
+3. Production-ready: LangGraph powers production-grade agents, trusted by companies like LinkedIn, Uber, Klarna, and GitLab.
+
+LangGraph integrates seamlessly with LangChain and LangSmith but does not require them. It provides fine-grained control over both the flow and state of your agent applications. 
