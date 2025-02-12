@@ -67,6 +67,7 @@ if [ ! -f rag/.env ]; then
     cat > rag/.env << EOL
 LLM_API_KEY=your_api_key
 LLM_BASE_URL=http://your-llm-server:1234/v1
+LLM_MODEL=your-model-name
 EOL
     echo "Created rag/.env (please update with your actual values)"
 fi
