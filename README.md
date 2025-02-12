@@ -21,27 +21,30 @@ POE-RAG/
 ## Features
 
 - **Web Crawler**
-  - Asynchronous crawling with Puppeteer
+  - Playwright-based asynchronous crawling
   - Markdown-formatted content extraction
   - Automatic knowledge base updates
+  - Apple Silicon compatible
 
 - **RAG System**
   - ChromaDB vector store
-  - DeepSeek LLM integration
+  - OpenAI-compatible API integration
   - Streaming responses
   - Context-aware answers
+  - Environment-based configuration
 
 - **Web Interface**
   - Real-time chat interface
-  - Streaming responses
+  - SSE-based streaming responses
   - Modern React components
+  - Markdown rendering
 
 ## Setup
 
 ### Prerequisites
 - Python 3.8+
 - Node.js 18+
-- Local LLM server (optional)
+- OpenAI-compatible LLM server
 
 ### Quick Start
 
@@ -62,13 +65,13 @@ chmod +x bootstrap.sh
 The bootstrap script will:
 1. Check prerequisites
 2. Set up Python virtual environment
-3. Install all dependencies
+3. Install all dependencies including Playwright
 4. Create necessary directories
 5. Set up example configuration files
 
 ### Manual Installation
 
-If you prefer to set up manually or the bootstrap script doesn't work for your environment:
+If you prefer to set up manually:
 
 1. **Backend Setup**
 ```bash
@@ -80,9 +83,11 @@ source .venv/bin/activate
 cd rag
 pip install -r requirements.txt
 
-# Install crawler
+# Install crawler and Playwright
 cd ../crawler
 pip install -e .
+pip install playwright
+playwright install chromium
 ```
 
 2. **Frontend Setup**
@@ -99,6 +104,7 @@ Create `.env` files with your configuration:
 ```bash
 LLM_API_KEY=your_api_key
 LLM_BASE_URL=http://your-llm-server:1234/v1
+LLM_MODEL=your-model-name
 ```
 
 2. **Web Interface** (`web/.env.local`):
@@ -123,7 +129,7 @@ npm run dev
 3. **Crawl Content**
 ```bash
 cd crawler
-python cli.py https://poe2db.tw/us/Items
+python cli.py https://www.poe2wiki.net/wiki/Path_of_Exile_2_Wiki
 ```
 
 ## API Endpoints
@@ -164,8 +170,8 @@ Common issues and solutions:
    - Verify API key if required
 
 2. **Crawler Issues**
+   - Ensure Playwright is installed: `playwright install chromium`
    - Check network connectivity
-   - Verify target URL is accessible
    - Look for errors in `crawler/logs/crawler.log`
 
 3. **Web Interface**

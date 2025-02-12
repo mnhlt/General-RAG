@@ -18,7 +18,7 @@ class KnowledgeBase(ABC):
 
 class ChromaDBKnowledgeBase(KnowledgeBase):
     def __init__(self):
-        self.client = chromadb.PersistentClient(path="./rag/storage")
+        self.client = chromadb.PersistentClient(path="./storage")
         try:
             self.collection = self.client.get_collection("knowledge_base")
         except:

@@ -1,16 +1,17 @@
 from openai import OpenAI
 from typing import List, Dict, Generator, Union
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
-class DeepSeekR1:
-    def __init__(self, api_key: str):
+class OpenAIAdapter:
+    def __init__(self, api_key: str, base_url: str, model: str):
         self.client = OpenAI(
-            base_url="http://192.168.1.11:1234/v1",
+            base_url=base_url,
             api_key=api_key,
         )
-        self.model = "deepseek-r1-distill-llama-8b"
+        self.model = model
         self.provider = {"order": ["chutes", "targon"]}
 
     def generate(self, messages: List[Dict[str, str]], stream: bool = False) -> Union[str, Generator]:

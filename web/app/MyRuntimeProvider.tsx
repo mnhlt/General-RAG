@@ -64,6 +64,7 @@ const StreamingLLMAdapter: ChatModelAdapter = {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Accept": "text/event-stream",
         },
         body: JSON.stringify({
           message: lastMessageText,
@@ -81,13 +82,12 @@ const StreamingLLMAdapter: ChatModelAdapter = {
       let buffer = '';
       let accumulatedContent = '';
       let lastYieldTime = Date.now();
-      const YIELD_INTERVAL = 300; // Yield every 300ms
+      const YIELD_INTERVAL = 300;
 
       try {
         while (true) {
           const { done, value } = await reader.read();
           if (done) {
-            // Yield any remaining content
             if (accumulatedContent) {
               yield {
                 content: [
@@ -101,50 +101,57 @@ const StreamingLLMAdapter: ChatModelAdapter = {
             break;
           }
 
-          // Decode the chunk
-          const chunk = decoder.decode(value);
+          buffer += decoder.decode(value);
+          const lines = buffer.split('\n');
+          buffer = '';
           
-          // Process each SSE message
-          const messages = chunk
-            .split('\n')
-            .filter(line => line.trim() !== '')
-            .map(line => line.replace(/^data: /, ''));
+          let currentEvent = '';
+          let currentData = '';
+          
+          for (const line of lines) {
+            if (line.trim() === '') {
+              // End of event
+              if (currentEvent === 'message' && currentData) {
+                try {
+                  const parsed = JSON.parse(currentData);
+                  if (parsed.content) {
+                    accumulatedContent += parsed.content;
+                    
+                    const currentTime = Date.now();
+                    const timeSinceLastYield = currentTime - lastYieldTime;
 
-          for (const message of messages) {
-            if (message === '[DONE]') continue;
-
-            try {
-              const parsed = JSON.parse(message);
-              if (parsed.content) {
-                accumulatedContent += parsed.content;
-                
-                const currentTime = Date.now();
-                const timeSinceLastYield = currentTime - lastYieldTime;
-
-                // Yield if enough time has passed or we hit a natural break
-                if (
-                  timeSinceLastYield >= YIELD_INTERVAL ||
-                  parsed.content.includes('.') ||
-                  parsed.content.includes('!') ||
-                  parsed.content.includes('?') ||
-                  parsed.content.includes('\n')
-                ) {
-                  if (accumulatedContent) {
-                    yield {
-                      content: [
-                        {
-                          type: "text",
-                          text: accumulatedContent,
-                        },
-                      ],
-                    };
-                    lastYieldTime = currentTime;
-                    // accumulatedContent = '';
+                    if (timeSinceLastYield >= YIELD_INTERVAL || 
+                        parsed.content.includes('.') ||
+                        parsed.content.includes('!') ||
+                        parsed.content.includes('?') ||
+                        parsed.content.includes('\n')
+                    ) {
+                      yield {
+                        content: [
+                          {
+                            type: "text",
+                            text: accumulatedContent,
+                          },
+                        ],
+                      };
+                      lastYieldTime = currentTime;
+                    }
                   }
+                } catch (e) {
+                  console.error('Error parsing JSON:', e);
                 }
+              } else if (currentEvent === 'error') {
+                console.error('Server error:', currentData);
               }
-            } catch (e) {
-              console.error('Error parsing JSON:', e);
+              currentEvent = '';
+              currentData = '';
+              continue;
+            }
+
+            if (line.startsWith('event: ')) {
+              currentEvent = line.slice(7);
+            } else if (line.startsWith('data: ')) {
+              currentData = line.slice(6);
             }
           }
 

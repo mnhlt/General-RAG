@@ -1,154 +1,29 @@
-# POE-RAG Technical Architecture
+# POE-RAG Architecture
 
-## System Overview
+## System Components
 
-POE-RAG is a Retrieval-Augmented Generation system designed to provide accurate, context-aware responses about Path of Exile 2. The system consists of three main components: Web Crawler, RAG System, and Web Interface.
+### 1. Web Crawler
+- Built with Playwright for cross-platform compatibility
+- Asynchronous content fetching
+- HTML to Markdown conversion
+- Structured content extraction
+- Automatic file management
 
-```mermaid
-graph TB
-    subgraph "Web Crawler"
-        C[Puppeteer Browser] --> D[Content Extractor]
-        D --> E[File Storage]
-        E --> F[Knowledge Base Updater]
-    end
-    
-    subgraph "RAG System"
-        G[FastAPI Backend] --> H[ChromaDB Vector Store]
-        H --> I[DeepSeek LLM]
-        G --> I
-    end
-    
-    subgraph "Web Interface"
-        J[Next.js Frontend] --> K[Streaming Adapter]
-        K --> G
-    end
+### 2. RAG System
+- FastAPI backend
+- ChromaDB vector store
+- OpenAI-compatible LLM integration
+- Environment-based configuration
+- Server-Sent Events (SSE) streaming
 
-    F --> H
-```
+### 3. Web Interface
+- Next.js frontend
+- Real-time chat UI
+- SSE-based streaming
+- Markdown rendering
+- Thread management
 
-## Component Architecture
-
-### 1. Web Crawler (`/crawler`)
-
-#### Core Components
-- **CLI Interface** (`cli.py`)
-  - Handles command-line arguments
-  - Manages crawler execution flow
-  - Provides user feedback
-
-- **Crawler Engine** (`poe2db_crawler.py`)
-  - Uses Puppeteer for JavaScript rendering
-  - Implements asynchronous page loading
-  - Handles content extraction and formatting
-
-#### Data Flow
-1. URL Input → Puppeteer Browser
-2. Rendered Content → BeautifulSoup Parser
-3. Structured Content → Markdown Formatter
-4. Formatted Content → File Storage
-5. File → Knowledge Base Update
-
-#### Key Features
-- Asynchronous operation using `asyncio`
-- Headless browser automation
-- Markdown content formatting
-- Automatic metadata addition
-- Error handling and logging
-
-### 2. RAG System (`/rag`)
-
-#### Components
-- **API Layer** (`api.py`)
-  ```python
-  FastAPI
-  ├── /query         # Standard query endpoint
-  ├── /query-stream  # Streaming response endpoint
-  └── /update        # Knowledge base update endpoint
-  ```
-
-- **Knowledge Base** (`knowledge_base.py`)
-  - ChromaDB vector store
-  - Document embedding
-  - Similarity search
-  - Collection management
-
-- **LLM Integration** (`llm_wrapper.py`)
-  - DeepSeek model integration
-  - Prompt management
-  - Response streaming
-  - Context handling
-
-#### Data Flow
-1. Query Input → FastAPI
-2. Query → ChromaDB (retrieval)
-3. Retrieved Context + Query → LLM
-4. LLM Response → Streaming/Direct Response
-
-#### Technical Details
-- **Vector Store**
-  - Embedding Model: ChromaDB default
-  - Collection Structure:
-    ```json
-    {
-      "id": "unique_id",
-      "text": "document_content",
-      "metadata": {
-        "source": "url",
-        "timestamp": "iso_date"
-      }
-    }
-    ```
-
-- **LLM Integration**
-  - Model: DeepSeek-R1-Distill-LLama-8B
-  - Context Window: 8K tokens
-  - Temperature: Dynamic based on query type
-  - Streaming Support: Server-Sent Events (SSE)
-
-### 3. Web Interface (`/web`)
-
-#### Components
-- **React Components**
-  ```
-  components/
-  ├── Chat/
-  │   ├── MessageList
-  │   ├── InputBox
-  │   └── StreamingMessage
-  ├── Layout/
-  └── Common/
-  ```
-
-- **State Management**
-  - React Context for global state
-  - Local state for UI components
-  - SSE connection management
-
-#### Technical Implementation
-- **Chat Interface**
-  ```typescript
-  interface Message {
-    role: 'user' | 'assistant';
-    content: {
-      type: 'text';
-      text: string;
-    }[];
-  }
-
-  interface ChatState {
-    messages: Message[];
-    threadId: string;
-    isStreaming: boolean;
-  }
-  ```
-
-- **Streaming Implementation**
-  - SSE connection handling
-  - Chunked response processing
-  - Progressive rendering
-  - Error recovery
-
-## Data Flow Architecture
+## Data Flow
 
 ### Query Flow
 ```mermaid
@@ -160,19 +35,19 @@ sequenceDiagram
     participant L as LLM
 
     U->>W: Sends Query
-    W->>A: POST /query
+    W->>A: POST /query or /query-stream
     A->>V: Search Similar Docs
     V-->>A: Return Context
     A->>L: Query + Context
     L-->>A: Generated Response
-    A-->>W: Streaming Response
+    A-->>W: Response (Stream/Single)
     W-->>U: Display Response
 ```
 
 ### Content Update Flow
 ```mermaid
 sequenceDiagram
-    participant C as Crawler
+    participant C as Crawler (Playwright)
     participant F as File System
     participant A as API
     participant V as Vector Store
@@ -192,43 +67,50 @@ sequenceDiagram
    - Input validation
    - Error handling
    - Secure headers
+   - Environment variable protection
 
 2. **Data Security**
    - File system permissions
-   - Environment variable protection
    - API key management
+   - Content validation
+   - Safe content storage
 
 3. **Web Security**
    - CORS configuration
    - XSS prevention
    - CSRF protection
+   - Content sanitization
 
 ## Performance Optimizations
 
 1. **Crawler**
-   - Connection pooling
-   - Resource cleanup
+   - Playwright optimization
    - Efficient parsing
+   - Content caching
+   - Resource cleanup
 
 2. **RAG System**
    - Vector caching
    - Batch processing
    - Query optimization
+   - Stream buffering
 
 3. **Web Interface**
    - Component memoization
    - Lazy loading
    - Response caching
+   - Efficient streaming
 
 ## Deployment Architecture
 
 ```mermaid
-graph LR
+graph TB
     subgraph "Production Environment"
         A[Nginx] --> B[Web Frontend]
         A --> C[FastAPI Backend]
         C --> D[ChromaDB]
         C --> E[LLM Server]
+        F[Crawler] --> C
     end
 ```
 
@@ -236,35 +118,51 @@ graph LR
 - CPU: 4+ cores
 - RAM: 16GB+ (32GB recommended)
 - Storage: 100GB+ SSD
-- Network: High bandwidth for LLM communication
+- Network: High bandwidth for LLM/crawler
 
 ### Scaling Considerations
 1. **Horizontal Scaling**
    - Multiple API instances
    - Load balancer configuration
    - Session management
+   - Crawler distribution
 
 2. **Vertical Scaling**
    - Vector store optimization
    - LLM batch processing
    - Memory management
+   - Storage efficiency
+
+## Environment Configuration
+
+### RAG System
+```env
+LLM_API_KEY=your_api_key
+LLM_BASE_URL=http://your-llm-server:1234/v1
+LLM_MODEL=your-model-name
+```
+
+### Web Interface
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
 
 ## Monitoring and Logging
 
-1. **System Metrics**
-   - API response times
-   - LLM latency
-   - Vector store performance
-   - Memory usage
-
-2. **Application Logs**
-   - Crawler activity
-   - Query patterns
+1. **Application Logs**
+   - API request/response
+   - Crawler activities
+   - LLM interactions
    - Error tracking
-   - User interactions
 
-3. **Alert System**
-   - Service health checks
-   - Error rate thresholds
-   - Resource utilization
-   - API availability 
+2. **System Metrics**
+   - Resource usage
+   - Response times
+   - Success rates
+   - Vector store stats
+
+3. **User Analytics**
+   - Query patterns
+   - Response quality
+   - Usage statistics
+   - Error rates 

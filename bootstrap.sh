@@ -43,6 +43,8 @@ cd ..
 echo "🕷️ Installing crawler..."
 cd crawler
 pip install -e .
+pip install playwright
+playwright install chromium
 cd ..
 
 # Install frontend dependencies

@@ -4,9 +4,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import logging
 import json
-from .rag_agent import app as rag_agent, Message
-from .knowledge_base import ChromaDBKnowledgeBase
-from .llm_wrapper import DeepSeekR1
+from rag_agent import app as rag_agent, Message, streaming_app
+from knowledge_base import ChromaDBKnowledgeBase
+from llm_wrapper import OpenAIAdapter
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -49,28 +49,27 @@ async def query_stream(query: Query):
         logger.info(f"Received streaming query: {query.message}")
         initial_message: Message = {"role": "user", "content": query.message}
         
-        # Get context first
-        kb = ChromaDBKnowledgeBase()
-        docs = kb.get_documents(query.message)
-        context = " ".join(docs)
-        
-        # Setup LLM with streaming
-        llm = DeepSeekR1(api_key="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")
-        messages = [
-            {"role": "system", "content": f"Use this context to answer the question: {context}"},
-            initial_message
-        ]
-        
         async def generate():
             try:
-                stream = llm.generate(messages, stream=True)
-                for chunk in stream:
-                    yield f"data: {json.dumps({'content': chunk})}\n\n"
-                yield "data: [DONE]\n\n"
+                response = streaming_app.invoke(
+                    {"messages": [initial_message], "stream": True},
+                    config={"configurable": {"thread_id": query.thread_id}}
+                )
+                messages = response.get("messages", [])
+                if not messages:
+                    error_msg = json.dumps({"error": "No messages in response"})
+                    yield f"event: error\ndata: {error_msg}\n\n"
+                    yield f"event: done\ndata: [DONE]\n\n"
+                    return
+
+                for i, message in enumerate(messages):
+                    if message["role"] == "assistant":
+                        yield f"id: {i}\nevent: message\ndata: {json.dumps({'content': message['content']})}\n\n"
+                yield f"event: done\ndata: [DONE]\n\n"
             except Exception as e:
                 error_msg = json.dumps({"error": str(e)})
-                yield f"data: {error_msg}\n\n"
-                yield "data: [DONE]\n\n"
+                yield f"event: error\ndata: {error_msg}\n\n"
+                yield f"event: done\ndata: [DONE]\n\n"
         
         return StreamingResponse(
             generate(),
@@ -81,6 +80,7 @@ async def query_stream(query: Query):
                 "Access-Control-Allow-Origin": "*",
                 "Access-Control-Allow-Methods": "POST, OPTIONS",
                 "Access-Control-Allow-Headers": "Content-Type",
+                "Content-Type": "text/event-stream"
             }
         )
         

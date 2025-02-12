@@ -2,8 +2,13 @@ from typing import TypedDict, List, Union, Dict, Any, Generator
 import logging
 from langgraph.graph import StateGraph, START
 from langgraph.checkpoint.memory import MemorySaver
-from .llm_wrapper import DeepSeekR1
-from .knowledge_base import ChromaDBKnowledgeBase
+from llm_wrapper import OpenAIAdapter
+from knowledge_base import ChromaDBKnowledgeBase
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv(".env")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -27,7 +32,7 @@ def retriever_node(state: AgentState) -> Dict[str, Any]:
     logger.info(f"Retrieved context: {context}")
     return {"context": context}
 
-def generator_node(state: AgentState) -> Union[Dict[str, Any], Generator]:
+def generator_node(state: AgentState) -> Dict[str, Any]:
     logger.info(f"Generator input state: {state}")
     messages = state['messages'].copy()
     context = state.get('context', '')
@@ -38,10 +43,22 @@ def generator_node(state: AgentState) -> Union[Dict[str, Any], Generator]:
     messages = [system_message] + messages
     logger.info(f"Messages to LLM: {messages}")
     
-    llm = DeepSeekR1(api_key="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")
+    model = os.environ.get("LLM_MODEL", "deepseek-r1-distill-llama-8b")  # Default if not set
+    
+    # Print environment variables for debugging
+    logger.info("Environment variables:")
+    for key, value in os.environ.items():
+        logger.info(f"{key}: {value}")
+
+    llm = OpenAIAdapter(
+        api_key=os.environ["LLM_API_KEY"],
+        base_url=os.environ["LLM_BASE_URL"],
+        model=model
+    )
     
     if stream:
-        return llm.generate(messages, stream=True)
+        # Return each chunk as a message
+        return {"messages": [{"role": "assistant", "content": chunk} for chunk in llm.generate(messages, stream=True)]}
     
     response = llm.generate(messages)
     logger.info(f"LLM response: {response}")
