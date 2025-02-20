@@ -10,9 +10,9 @@ class OpenAIAdapter:
         self.client = OpenAI(
             base_url=base_url,
             api_key=api_key,
+            timeout=10800        
         )
         self.model = model
-        self.provider = {"order": ["chutes", "targon"]}
 
     def generate(self, messages: List[Dict[str, str]], stream: bool = False) -> Union[str, Generator]:
         """

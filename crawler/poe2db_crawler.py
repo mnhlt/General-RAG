@@ -69,7 +69,7 @@ class POE2DBCrawler:
                 content.append("")  # Empty line after metadata
                 
                 # Get all text content, preserving headers and lists
-                for element in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'tr']):
+                for element in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'tr', "section"]):
                     if element.name.startswith('h'):
                         # Add appropriate markdown heading level
                         level = element.name[1]
@@ -94,6 +94,9 @@ class POE2DBCrawler:
                             if item_text:
                                 content.append(f"- {item_text}")
                         content.append("")
+                    elif element.name in ["section"]:
+                        content.append(f"## {element.get_text(strip=True)}")
+                        content.append("")  
                 
                 # Join all content with newlines
                 processed_content = "\n".join(content)
