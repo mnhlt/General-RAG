@@ -1,27 +1,18 @@
 'use client'
 import { Thread } from "@/components/assistant-ui/thread";
-import { useChatRuntime } from "@assistant-ui/react-ai-sdk";
-import { AssistantRuntimeProvider } from "@assistant-ui/react";
-import RootLayout from "./layout";
-
-// export default function Home() {
-//   const runtime = useChatRuntime({ api: "/api/chat" });
-
-//   return (
-//     <AssistantRuntimeProvider runtime={runtime}>
-//       <main className="h-dvh">
-//         <Thread />
-//       </main>
-//     </AssistantRuntimeProvider>
-//   );
-// }
-
+import { FileUpload } from "@/components/ui/FileUpload";
 
 export default function Home() {
-
   return (
     <main className="h-dvh">
-    <Thread />
-  </main>
+      <div className="flex w-full h-full">
+        <div className="flex-1">
+          <Thread />
+        </div>
+        <div className="w-80 border-l p-4 bg-gray-50">
+          <FileUpload />
+        </div>
+      </div>
+    </main>
   );
 }
